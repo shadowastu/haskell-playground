@@ -52,7 +52,9 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct [] = 1
+lazyProduct (0 : _) = 0
+lazyProduct (x : xs) = x * lazyProduct xs
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -62,7 +64,8 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate [] = []
+duplicate (x : xs) = x : x : duplicate xs
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -74,7 +77,16 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt _ [] = (Nothing, [])
+removeAt n lst 
+    | n < 0 = (Nothing, lst)
+    | otherwise = go n lst []
+        where
+            go :: Int -> [a] -> [a] -> (Maybe a, [a])
+            go _ [] newlst = (Nothing, newlst)
+            go 0 (x : xs) newlst = (Just x, newlst ++ xs)
+            go k (x : xs) newlst = go (k - 1) (xs) (newlst ++ [x])
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -85,7 +97,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -101,7 +114,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: String -> String
+dropSpaces = (takeWhile (/= ' ') . dropWhile(== ' '))
 
 {- |
 
@@ -159,12 +173,69 @@ You're free to define any helper functions.
 
 -- some help in the beginning ;)
 data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
-    , knightEndurance :: Int
+    { knightHealth     :: Int
+    , knightAttack     :: Int
+    , knightEndurance  :: Int
+    , knightExperience :: Int
+    , knightGold       :: Int
+    , knightSword      :: Maybe Sword
+    , knightShield     :: Maybe Shield
+    , knightAlive      :: Bool
     }
+    deriving (Show)
 
-dragonFight = error "TODO"
+data Color
+    = Red
+    | Black
+    | Green
+    deriving (Show, Eq, Ord)
+    
+    
+ newtype Sword = Sword Int
+    deriving (Show)
+    
+newtype Shield = Shield Int
+    deriving (Show)
+
+data Chest a = Chest
+    { chestGold :: Word
+    , chestTreasure :: a
+    }
+    deriving (Show)
+
+data Dragon = Dragon
+    { dragonColor :: Color
+    , dragonExperience :: Int
+    , dragonHealth :: Int
+    , dragonFirePower :: Int
+    }
+    deriving (Show)
+
+hatchDragon :: Color -> Dragon
+hatchDragon Red = Dragon Red 100 100 10
+hatchDragon Black = Dragon Black 150 150 15
+hatchDragon Green = Dragon Green 250 250 25
+
+bornKnight :: Int -> Int -> Int -> Knight
+bornKnight hp atk end = Knight hp atk end 0 0 Nothing Nothing True
+
+--------------------------------
+
+dragonFight :: Knight -> Dragon -> Knight
+dragonFight k d = 
+    let kHp = knightHealth k
+        kEnd = knightEndurance k
+        dHp = dragonHealth d
+        roundF = 1
+    in go kHp kEnd dHp roundF
+        where
+            go :: Int -> Int -> Int -> Int -> Knight
+            go kHp kEnd dHp roundF
+                | (kHp <= 0) || (knightAlive k == False) = k {knightAlive = False}
+                | dHp <= 0 = k {knightHealth = kHp, knightEndurance = kEnd, knightExperience = knightExperience k + dragonExperience d}
+                | kEnd <= 0 = k {knightHealth = kHp, knightEndurance = 0}
+                | mod roundF 10 == 0 = go (kHp - dragonFirePower d) (kEnd - 1) (dHp - knightAttack k) (roundF + 1)
+                | otherwise = go kHp (kEnd - 1) (dHp - knightAttack k) (roundF + 1)
 
 ----------------------------------------------------------------------------
 -- Extra Challenges
@@ -185,7 +256,9 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing [] = True
+isIncreasing [_] = True
+isIncreasing (x : y : ys) = x < y && isIncreasing (y : ys)
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -198,7 +271,12 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge [] right = right
+merge left [] = left
+merge (x : xs) (y : ys)
+    | x > y = y : merge (x : xs) ys
+    | x == y = x : y : merge xs ys
+    | otherwise = x : merge xs (y : ys)
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -215,7 +293,16 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort [] = []
+mergeSort ls = go ls (length ls)
+    where
+        go :: [Int] -> Int -> [Int]
+        go [] _ = []
+        go lst 1 = lst
+        go lst len = 
+            let left = div len 2
+                right = left + mod len 2
+            in merge (go (take left lst) left) (go (drop left lst) right)
 
 
 {- | Haskell is famous for being a superb language for implementing
